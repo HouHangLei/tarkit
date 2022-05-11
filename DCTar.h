@@ -23,7 +23,7 @@
  @param: error is used to report back if an error happened.
  @return if the compression was successful or not.
  */
-+(BOOL)compressFileAtPath:(NSString*)filePath toPath:(NSString*)toPath error:(NSError**)error;
++(void)compressFileAtPath:(NSString*)filePath toPath:(NSString*)path completionHandler:(void (^)(NSError * _Nullable error))completionHandler;;
 
 /**
  Create a gzipped tar file from a data blob.
@@ -41,7 +41,7 @@
  @param: error is used to report back if an error happened.
  @return if the decompression was successful or not.
  */
-+(BOOL)decompressFileAtPath:(NSString*)filePath toPath:(NSString*)path error:(NSError**)error;
++(void)decompressFileAtPath:(NSString*)filePath toPath:(NSString*)path completionHandler:(void (^)(NSError * _Nullable error))completionHandler;
 
 /**
  decompress a tar or gzipped tar (.tar or tar.giz) file.

@@ -25,47 +25,47 @@
  * Define structure of POSIX 'ustar' tar header.
  + Provided by libarchive.
  */
-#define	USTAR_name_offset 0
-#define	USTAR_name_size 100
-#define	USTAR_mode_offset 100
-#define	USTAR_mode_size 6
-#define	USTAR_mode_max_size 8
-#define	USTAR_uid_offset 108
-#define	USTAR_uid_size 6
-#define	USTAR_uid_max_size 8
-#define	USTAR_gid_offset 116
-#define	USTAR_gid_size 6
-#define	USTAR_gid_max_size 8
-#define	USTAR_size_offset 124
-#define	USTAR_size_size 11
-#define	USTAR_size_max_size 12
-#define	USTAR_mtime_offset 136
-#define	USTAR_mtime_size 11
-#define	USTAR_mtime_max_size 11
-#define	USTAR_checksum_offset 148
-#define	USTAR_checksum_size 8
-#define	USTAR_typeflag_offset 156
-#define	USTAR_typeflag_size 1
-#define	USTAR_linkname_offset 157
-#define	USTAR_linkname_size 100
-#define	USTAR_magic_offset 257
-#define	USTAR_magic_size 6
-#define	USTAR_version_offset 263
-#define	USTAR_version_size 2
-#define	USTAR_uname_offset 265
-#define	USTAR_uname_size 32
-#define	USTAR_gname_offset 297
-#define	USTAR_gname_size 32
-#define	USTAR_rdevmajor_offset 329
-#define	USTAR_rdevmajor_size 6
-#define	USTAR_rdevmajor_max_size 8
-#define	USTAR_rdevminor_offset 337
-#define	USTAR_rdevminor_size 6
-#define	USTAR_rdevminor_max_size 8
-#define	USTAR_prefix_offset 345
-#define	USTAR_prefix_size 155
-#define	USTAR_padding_offset 500
-#define	USTAR_padding_size 12
+#define    USTAR_name_offset 0
+#define    USTAR_name_size 100
+#define    USTAR_mode_offset 100
+#define    USTAR_mode_size 6
+#define    USTAR_mode_max_size 8
+#define    USTAR_uid_offset 108
+#define    USTAR_uid_size 6
+#define    USTAR_uid_max_size 8
+#define    USTAR_gid_offset 116
+#define    USTAR_gid_size 6
+#define    USTAR_gid_max_size 8
+#define    USTAR_size_offset 124
+#define    USTAR_size_size 11
+#define    USTAR_size_max_size 12
+#define    USTAR_mtime_offset 136
+#define    USTAR_mtime_size 11
+#define    USTAR_mtime_max_size 11
+#define    USTAR_checksum_offset 148
+#define    USTAR_checksum_size 8
+#define    USTAR_typeflag_offset 156
+#define    USTAR_typeflag_size 1
+#define    USTAR_linkname_offset 157
+#define    USTAR_linkname_size 100
+#define    USTAR_magic_offset 257
+#define    USTAR_magic_size 6
+#define    USTAR_version_offset 263
+#define    USTAR_version_size 2
+#define    USTAR_uname_offset 265
+#define    USTAR_uname_size 32
+#define    USTAR_gname_offset 297
+#define    USTAR_gname_size 32
+#define    USTAR_rdevmajor_offset 329
+#define    USTAR_rdevmajor_size 6
+#define    USTAR_rdevmajor_max_size 8
+#define    USTAR_rdevminor_offset 337
+#define    USTAR_rdevminor_size 6
+#define    USTAR_rdevminor_max_size 8
+#define    USTAR_prefix_offset 345
+#define    USTAR_prefix_size 155
+#define    USTAR_padding_offset 500
+#define    USTAR_padding_size 12
 
 
 static const char template_header[] = {
@@ -87,7 +87,7 @@ static const char template_header[] = {
     /* Initial checksum value: 8 spaces */
     ' ',' ',' ',' ',' ',' ',' ',' ',
     /* Typeflag: 1 byte */
-    '0',			/* '0' = regular file */
+    '0',            /* '0' = regular file */
     /* Linkname: 100 bytes */
     0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
@@ -116,7 +116,7 @@ static const char template_header[] = {
 @implementation DCTar
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-+(BOOL)compressFileAtPath:(NSString*)filePath toPath:(NSString*)path error:(NSError**)error
++(void)compressFileAtPath:(NSString*)filePath toPath:(NSString*)path completionHandler:(void (^)(NSError * _Nullable error))completionHandler
 {
     //does decompression as needed (based on if the file ends .gz)
     NSFileManager *manager = [NSFileManager defaultManager];
@@ -132,12 +132,15 @@ static const char template_header[] = {
         }
         BOOL status = YES;
         if([workPath hasSuffix:@".tar"]) {
-            if(![self tarFileAtPath:filePath toPath:workPath error:error]) {
-                if(error)
-                    *error = [self errorWithDetail:@"unable to tar the file" code:-3];
-                return status;
+            NSError *error = nil;
+            if(![self tarFileAtPath:filePath toPath:workPath error:&error]) {
+                if(error) {
+                    completionHandler(error);
+                }else {
+                    completionHandler(nil);
+                }
+                return;
             }
-            
         }
         if(doGzip) {
             NSFileHandle *fileHandle = [NSFileHandle fileHandleForReadingAtPath:workPath];
@@ -147,11 +150,14 @@ static const char template_header[] = {
                 [manager removeItemAtPath:workPath error:nil]; //remove our temp tar file
             }
         }
-        return status;
+        if(status) {
+            completionHandler(nil);
+        }else {
+            completionHandler([self errorWithDetail:@"file compression failed" code:-2]);
+        }
+    }else {
+        completionHandler([self errorWithDetail:@"File already exists" code:-2]);
     }
-    if(error)
-        *error = [self errorWithDetail:@"file not found" code:-2];
-    return NO;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //+(BOOL)compressData:(NSData*)data toPath:(NSString*)path error:(NSError**)error
@@ -161,12 +167,13 @@ static const char template_header[] = {
 //    return NO;
 //}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-+(BOOL)decompressFileAtPath:(NSString*)filePath toPath:(NSString*)path error:(NSError**)error
++(void)decompressFileAtPath:(NSString*)filePath toPath:(NSString*)path completionHandler:(void (^)(NSError * _Nullable error))completionHandler
 {
     //does decompression as needed (based on if the file ends .gz)
     NSFileManager *manager = [NSFileManager defaultManager];
     if([manager fileExistsAtPath:filePath]) {
         NSDictionary *attributes = [manager attributesOfItemAtPath:filePath error:nil];
+        unsigned long long size = [attributes[NSFileSize] longLongValue];
         NSFileHandle *fileHandle = [NSFileHandle fileHandleForReadingAtPath:filePath];
         
         if([filePath hasSuffix:@".gz"]) {
@@ -176,20 +183,25 @@ static const char template_header[] = {
             if([self fileInflate:fileHandle isGzip:YES toPath:tarPath]) {
                 [fileHandle closeFile];
                 attributes = [manager attributesOfItemAtPath:tarPath error:nil];
+                size = [attributes[NSFileSize] longLongValue];
                 fileHandle = [NSFileHandle fileHandleForReadingAtPath:tarPath];
                 filePath = tarPath;
             }
         }
         if([filePath hasSuffix:@".tar"]) {
-            BOOL status = [self untarFileAtPath:filePath toPath:path error:error];
+            BOOL status = [self untarFileAtPath:filePath toPath:path error:nil];
             [manager removeItemAtPath:filePath error:nil]; //remove our temp tar file
-            return status;
+            if (status) {
+                completionHandler(nil);
+            }else {
+                completionHandler([self errorWithDetail:@"file decompression failed" code:-2]);
+            }
+        }else {
+            completionHandler([self errorWithDetail:@"file decompression failed" code:-2]);
         }
-        return YES;
+    }else {
+        completionHandler([self errorWithDetail:@"File already exists" code:-2]);
     }
-    if(error)
-        *error = [self errorWithDetail:@"file not found" code:-2];
-    return NO;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 +(BOOL)decompressData:(NSData*)data toPath:(NSString*)path error:(NSError**)error
@@ -209,14 +221,14 @@ static const char template_header[] = {
         for(NSString *file in [fileManager enumeratorAtPath:tarFilePath]) {
             BOOL isDir = NO;
             [fileManager fileExistsAtPath:[tarFilePath stringByAppendingPathComponent:file] isDirectory:&isDir];
-            [self chunkedWriteDataFromPath:file inDirectory:tarFilePath isDirectory:isDir toFileHandle: fileHandle];
+            NSData *tarContent = [self binaryEncodeDataForPath:file inDirectory:tarFilePath isDirectory:isDir];
+            [fileHandle writeData:tarContent];
         }
         //Append two empty blocks to indicate end
         char block[TAR_BLOCK_SIZE*2];
         memset(&block, '\0', TAR_BLOCK_SIZE*2);
         [fileHandle writeData:[NSData dataWithBytes:block length:TAR_BLOCK_SIZE*2]];
         [fileHandle closeFile];
-        free(block);
         return YES;
     }
     if(error)
@@ -368,9 +380,7 @@ static const char template_header[] = {
     memset(&nameBytes, '\0', TAR_NAME_SIZE + 1); // Fill byte array with nul char
     memcpy(&nameBytes, [self dataForObject:object inRange:NSMakeRange((uInt)offset + TAR_NAME_POSITION, TAR_NAME_SIZE)
                                 orLocation:offset + TAR_NAME_POSITION andLength:TAR_NAME_SIZE].bytes, TAR_NAME_SIZE);
-    NSString *name = [NSString stringWithCString:nameBytes encoding:NSASCIIStringEncoding];
-    free(nameBytes);
-    return name;
+    return [NSString stringWithCString:nameBytes encoding:NSASCIIStringEncoding];
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 + (unsigned long long)sizeForObject:(id)object atOffset:(unsigned long long)offset
@@ -380,9 +390,7 @@ static const char template_header[] = {
     memset(&sizeBytes, '\0', TAR_SIZE_SIZE + 1); // Fill byte array with nul char
     memcpy(&sizeBytes, [self dataForObject:object inRange:NSMakeRange((uInt)offset + TAR_SIZE_POSITION, TAR_SIZE_SIZE)
                                 orLocation:offset + TAR_SIZE_POSITION andLength:TAR_SIZE_SIZE].bytes, TAR_SIZE_SIZE);
-    unsigned long long size = strtol(sizeBytes, NULL, 8); // Size is an octal number, convert to decimal
-    free(sizeBytes);
-    return size;
+    return strtol(sizeBytes, NULL, 8); // Size is an octal number, convert to decimal
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 +(void)writeFileDataForObject:(id)object atLocation:(unsigned long long)location withLength:(unsigned long long)length atPath:(NSString *)path
@@ -422,24 +430,27 @@ static const char template_header[] = {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //tar stuff
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-+ (void)chunkedWriteDataFromPath:(NSString *) path inDirectory:(NSString *)basepath  isDirectory:(BOOL) isDirectory toFileHandle:(NSFileHandle *)outputFileHandle {
++ (NSData*)binaryEncodeDataForPath:(NSString *) path inDirectory:(NSString *)basepath  isDirectory:(BOOL) isDirectory{
+    
+    NSMutableData *tarData;
+    char block[TAR_BLOCK_SIZE];
     
     if(isDirectory) {
         path = [path stringByAppendingString:@"/"];
     }
-    
     //write header
-    [self writeHeaderForPath:path withBasePath:basepath isDirectory:isDirectory toFileHandle:outputFileHandle];
+    [self writeHeader:block forPath:path withBasePath:basepath isDirectory:isDirectory];
+    tarData = [NSMutableData dataWithBytes:block length:TAR_BLOCK_SIZE];
     
     //write data
     if(!isDirectory) {
-        [self chunkedWriteDataFromPath: [basepath stringByAppendingPathComponent:path] toFileHandle: outputFileHandle];
+        [self writeDataFromPath: [basepath stringByAppendingPathComponent:path] toData:tarData];
     }
+    return tarData;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-+(void)writeHeaderForPath:(NSString*)path withBasePath:(NSString*)basePath isDirectory:(BOOL)isDirectory toFileHandle:(NSFileHandle *)outputFileHandle  {
++(void)writeHeader:(char*)buffer forPath:(NSString*)path withBasePath:(NSString*)basePath isDirectory:(BOOL)isDirectory {
     
-    char buffer[TAR_BLOCK_SIZE];
     memcpy(buffer,&template_header, TAR_BLOCK_SIZE);
     NSError *error = nil;
     NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:[basePath stringByAppendingPathComponent:path] error:&error];
@@ -502,35 +513,16 @@ static const char template_header[] = {
         checksum += 255 & (unsigned int)buffer[i];
     buffer[USTAR_checksum_offset + 6] = '\0';
     format_octal(checksum, buffer + USTAR_checksum_offset, 6);
-    [outputFileHandle writeData:[NSData dataWithBytes:buffer length:TAR_BLOCK_SIZE]];
-    
-    free(buffer);
-    free(nameChar);
-    free(unameChar);
-    free(gnameChar);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-+(void)chunkedWriteDataFromPath:(NSString *)path toFileHandle:(NSFileHandle*) outputFileHandle {
-    NSFileHandle *sourceFile = [NSFileHandle fileHandleForReadingAtPath:path];
-    
-    NSUInteger fileLength = [sourceFile seekToEndOfFile];
-    NSUInteger offset = 0;
-    [sourceFile seekToFileOffset:0];
-    
-    while(offset < fileLength) {
-        NSData *chunk = [sourceFile readDataOfLength:TAR_BLOCK_SIZE];
-        NSUInteger chunkSize = [chunk length];
-        [outputFileHandle writeData:chunk];
-        
-        unsigned long padding =  (TAR_BLOCK_SIZE - (chunkSize % TAR_BLOCK_SIZE)) % TAR_BLOCK_SIZE;
-        if(padding > 0) {
-            char buffer[padding];
-            memset(&buffer, '\0', padding);
-            [outputFileHandle writeData:[NSData dataWithBytes:buffer length:TAR_BLOCK_SIZE*2]];
-            free(buffer);
-        }
-        offset += chunkSize;
-    }
++(void)writeDataFromPath:(NSString *)path toData:(NSMutableData*)data {
+    NSData *content = [NSData dataWithContentsOfFile:path];
+    NSUInteger contentSize = [content length];
+    unsigned long padding =  (TAR_BLOCK_SIZE - (contentSize % TAR_BLOCK_SIZE)) % TAR_BLOCK_SIZE ;
+    char buffer[padding];
+    memset(&buffer, '\0', padding);
+    [data appendData:content];
+    [data appendBytes:buffer length:padding];
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 + (void)writeString:(NSString*)string toChar:(char*)charArray withLength:(NSInteger)size
@@ -600,7 +592,7 @@ static int format_octal(int64_t v, char *p, int s)
         return (-1);
     }
     
-    p += s;		/* Start at the end and work backwards. */
+    p += s;        /* Start at the end and work backwards. */
     while (s-- > 0) {
         *--p = (char)('0' + (v & 7));
         v >>= 3;
