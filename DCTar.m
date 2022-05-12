@@ -175,7 +175,8 @@ static const char template_header[] = {
         NSDictionary *attributes = [manager attributesOfItemAtPath:filePath error:nil];
         unsigned long long size = [attributes[NSFileSize] longLongValue];
         NSFileHandle *fileHandle = [NSFileHandle fileHandleForReadingAtPath:filePath];
-        
+        // 是否删除tar文件【如果是.tar.gz解压出的.tar就删除，否则不删除】
+        BOOL isRemoveTarFile = false;
         if([filePath hasSuffix:@".gz"]) {
             NSRange range = [filePath rangeOfString:@".gz" options:NSBackwardsSearch];
             NSString *tarPath = [filePath substringToIndex:range.location];
@@ -186,11 +187,14 @@ static const char template_header[] = {
                 size = [attributes[NSFileSize] longLongValue];
                 fileHandle = [NSFileHandle fileHandleForReadingAtPath:tarPath];
                 filePath = tarPath;
+                isRemoveTarFile = true;
             }
         }
         if([filePath hasSuffix:@".tar"]) {
             BOOL status = [self untarFileAtPath:filePath toPath:path error:nil];
-            [manager removeItemAtPath:filePath error:nil]; //remove our temp tar file
+            if (isRemoveTarFile) {
+                [manager removeItemAtPath:filePath error:nil]; //remove our temp tar file
+            }
             if (status) {
                 completionHandler(nil);
             }else {
